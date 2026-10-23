@@ -1,125 +1,82 @@
 (() => {
-  "use strict";
+'use strict';
+// CONFIGURE AQUI: código do país + DDD + número, apenas dígitos.
+const WHATSAPP = '';
+const INITIAL_MESSAGE = 'Olá! Gostaria de agendar uma avaliação com a Dra. Stefany Gomes.';
+const SERVICES = [["Harmonização facial", "Planejamento individual", "Um espaço para apresentar a proposta de harmonização facial da profissional. Confirmar descrição e indicação na revisão do conteúdo."], ["Preenchimento labial", "Proporções e expressão", "Descrição do tratamento a ser validada pela profissional antes da publicação."], ["Toxina botulínica", "Avaliação personalizada", "Descrição do tratamento a ser validada pela profissional antes da publicação."], ["Bioestimuladores", "Plano de cuidado", "Descrição do tratamento a ser validada pela profissional antes da publicação."], ["Contorno facial", "Atenção aos detalhes", "Descrição do tratamento a ser validada pela profissional antes da publicação."], ["Cuidados com a pele", "Acompanhamento individual", "Descrição do tratamento a ser validada pela profissional antes da publicação."]];
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const configured = /^\d{10,15}$/.test(WHATSAPP);
+const whatsapp = text => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`;
 
-  /* CONFIGURAÇÃO: número do WhatsApp com código do país e DDD, só dígitos. Ex.: 5561999999999 */
-  const WHATSAPP = "";
-  const MESSAGE = "Olá! Gostaria de agendar uma avaliação com a Dra. Fizzame Sá.";
-
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const $ = (s, c = document) => c.querySelector(s);
-  const $$ = (s, c = document) => [...c.querySelectorAll(s)];
-  const hasWhats = /^\d{10,15}$/.test(WHATSAPP);
-  const whatsUrl = text => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`;
-
-  /* loading de apresentação: o contador é visual, não mede o carregamento real */
-  const loader = $("#loader");
-  function runLoader(done) {
-    if (!loader || reduce || !document.documentElement.classList.contains("js")) { loader?.remove(); done(); return; }
-    const fill = $("#loader-fill"), count = $("#loader-count");
-    const duration = 1800, t0 = performance.now();
-    let finished = false;
-    function end() {
-      if (finished) return; finished = true;
-      loader.classList.add("done");
-      setTimeout(() => loader.remove(), 800);
-      done();
-    }
-    (function step(now) {
-      const p = Math.min((now - t0) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      const value = Math.round(eased * 100);
-      fill.style.transform = `scaleX(${eased})`;
-      count.textContent = value;
-      if (p < 1) requestAnimationFrame(step); else setTimeout(end, 280);
-    })(t0);
-    setTimeout(end, 4500);
-  }
-
-  /* entrada suave ao rolar, executada uma vez */
-  function initReveal() {
-    const items = $$(".reveal");
-    if (reduce || !("IntersectionObserver" in window)) { items.forEach(i => i.classList.add("in")); return; }
-    items.forEach(el => {
-      const siblings = [...el.parentElement.children].filter(c => c.classList.contains("reveal"));
-      el.style.setProperty("--d", Math.min(siblings.indexOf(el), 5) * 90 + "ms");
-    });
-    const io = new IntersectionObserver(entries => entries.forEach(e => {
-      if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
-    }), { threshold: .12, rootMargin: "0px 0px -30px 0px" });
-    items.forEach(i => io.observe(i));
-  }
-
-  /* cabeçalho e menu */
-  const header = $(".header");
-  const onScroll = () => header?.classList.toggle("scrolled", scrollY > 20);
-  addEventListener("scroll", onScroll, { passive: true }); onScroll();
-
-  const btn = $("#menu-btn"), menu = $("#menu");
-  function setMenu(open) {
-    menu.classList.toggle("open", open);
-    btn.classList.toggle("open", open);
-    btn.setAttribute("aria-expanded", String(open));
-    btn.setAttribute("aria-label", open ? "Fechar menu" : "Abrir menu");
-  }
-  btn?.addEventListener("click", () => setMenu(!menu.classList.contains("open")));
-  $$("a", menu).forEach(a => a.addEventListener("click", () => setMenu(false)));
-  addEventListener("keydown", e => { if (e.key === "Escape") setMenu(false); });
-  addEventListener("resize", () => { if (innerWidth > 820) setMenu(false); });
-/* Botão de voltar ao topo */
-const topButton = document.querySelector("#back-to-top");
-
-if (topButton) {
-  function updateTop() {
-    topButton.classList.toggle("visible", window.scrollY > 500);
-  }
-
-  window.addEventListener("scroll", updateTop, { passive: true });
-
-  // Define o estado inicial, inclusive ao recarregar a página.
-  updateTop();
-
-  topButton.addEventListener("click", (event) => {
-    event.preventDefault();
-
-    window.scrollTo({
-      top: 0,
-      behavior: reduce ? "instant" : "smooth"
-    });
-  });
+function reveal() {
+ const els = $$('.reveal');
+ if (reduce || !('IntersectionObserver' in window)) { els.forEach(el => el.classList.add('in')); return; }
+ const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+  if (entry.isIntersecting) { entry.target.classList.add('in'); observer.unobserve(entry.target); }
+ }), {threshold: .08});
+ els.forEach(el => observer.observe(el));
 }
-  /* botões de agendamento: usam WhatsApp quando o número estiver configurado */
-  if (hasWhats) $$("[data-cta]").forEach(a => { a.href = whatsUrl(MESSAGE); a.target = "_blank"; a.rel = "noopener noreferrer"; });
+// Contador visual de apresentação; não é progresso real de download.
+const loader = $('#loader');
+function finishLoader() {
+ if (!loader || loader.classList.contains('done')) return;
+ loader.classList.add('done'); setTimeout(() => loader.remove(), 650); reveal();
+}
+if (reduce) { loader?.remove(); reveal(); }
+else {
+ const start = performance.now();
+ function step(now) {
+  if (!loader || loader.classList.contains('done')) return;
+  const p = Math.min((now-start)/1400,1), eased = 1-Math.pow(1-p,3);
+  $('#loader-fill').style.transform = `scaleX(${eased})`;
+  $('#loader-count').textContent = Math.round(eased*100)+'%';
+  if(p<1) requestAnimationFrame(step); else setTimeout(finishLoader,180);
+ }
+ requestAnimationFrame(step); setTimeout(finishLoader,3500);
+}
 
-  /* comparador antes/depois (só inicia se o bloco estiver ativo no HTML) */
-  $$(".compare").forEach(box => {
-    const range = $(".compare-range", box);
-    const set = v => box.style.setProperty("--pos", v + "%");
-    range?.addEventListener("input", () => set(range.value));
-    set(range?.value || 50);
-  });
+const toggle = $('.menu-toggle'), menu = $('#navigation');
+function setMenu(open) { menu.classList.toggle('open',open); toggle.setAttribute('aria-expanded',String(open)); toggle.setAttribute('aria-label',open?'Fechar menu':'Abrir menu'); }
+toggle.addEventListener('click',()=>setMenu(toggle.getAttribute('aria-expanded')!=='true'));
+menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));
+addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
+addEventListener('resize',()=>{if(innerWidth>680)setMenu(false)});
 
-  /* formulário */
-  const form = $("#form"), note = $("#form-note");
-  form?.addEventListener("submit", e => {
-    e.preventDefault();
-    const data = new FormData(form);
-    const nome = String(data.get("nome") || "").trim();
-    const tel = String(data.get("telefone") || "").trim();
-    const msg = String(data.get("mensagem") || "").trim();
-    if (!nome || !tel) { note.textContent = "Preencha nome e WhatsApp para continuar."; return; }
-    if (hasWhats) {
-      const text = `${MESSAGE}\n\nNome: ${nome}\nWhatsApp: ${tel}` + (msg ? `\nMensagem: ${msg}` : "");
-      window.open(whatsUrl(text), "_blank", "noopener");
-      note.textContent = "Abrindo o WhatsApp.";
-    } else {
-      note.textContent = "Demonstração: nenhum dado foi enviado ou armazenado.";
-    }
-  });
+const topButton = $('#back-to-top');
+const updateTop = () => topButton.classList.toggle('visible',scrollY>500);
+addEventListener('scroll',updateTop,{passive:true});updateTop();
+topButton.addEventListener('click',()=>scrollTo({top:0,behavior:reduce?'instant':'smooth'}));
 
-  const year = $("#year"); if (year) year.textContent = new Date().getFullYear();
+$$('.compare').forEach(box=>{
+ const input=box.querySelector('.compare-range');
+ const update=()=>box.style.setProperty('--pos',input.value+'%');
+ input.addEventListener('input',update);update();
+});
 
-  initReveal();
-  runLoader(() => {});
+if(configured){
+ $$('[data-whatsapp]').forEach(a=>{a.href=whatsapp(INITIAL_MESSAGE);a.target='_blank';a.rel='noopener noreferrer'});
+ $('#form-status').textContent='Ao enviar, sua mensagem será aberta no WhatsApp. Não inclua dados sensíveis.';
+}
+$('#booking-form').addEventListener('submit',e=>{
+ e.preventDefault();
+ const status=$('#form-status');
+ if(!configured){status.textContent='Demonstração: nenhum dado foi enviado ou armazenado. Configure o WhatsApp no script.js.';return;}
+ const form=new FormData(e.currentTarget);
+ const lines=[INITIAL_MESSAGE,'',...Array.from(form,([k,v])=>v.trim()?`${({nome:'Nome',telefone:'WhatsApp',email:'E-mail',interesse:'Interesse',mensagem:'Mensagem'})[k]}: ${v.trim()}`:'').filter(Boolean)];
+ const win=window.open(whatsapp(lines.join('\n')),'_blank','noopener,noreferrer');
+ status.textContent='A mensagem foi preparada para o WhatsApp. Confirme o envio no aplicativo.';
+});
+
+const dialog=$('#service-dialog');
+$$('[data-service]').forEach(btn=>btn.addEventListener('click',()=>{
+ const s=SERVICES[Number(btn.dataset.service)];
+ $('#dialog-title').textContent=s[0];$('#dialog-description').textContent=s[2];
+ dialog.showModal();
+}));
+$('.dialog-close').addEventListener('click',()=>dialog.close());
+$('#dialog-contact').addEventListener('click',()=>dialog.close());
+dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close()}});
+$('#year').textContent=new Date().getFullYear();
 })();
-const topButton=document.querySelector("#back-to-top");
-function updateTop(){topButton.classList.toggle("visible",window.scrollY>500);}
